@@ -121,6 +121,7 @@ if (window.location.pathname === "/item") {
 
             $("span.comhead:not(:first)").each(function() {
                 var commentDetails = $(this).text().match(/([A-Za-z0-9_]+) ([0-9]{0,3} (?:minutes?|hours?|days?|years?) ago)/);
+                if (!commentDetails) return; // Deleted comment
                 var commentAuthor = commentDetails[1];
                 var commentTimeStamp = timeAgoToDate(commentDetails[2]);
                 var commentText = $(this).parents().eq(1).find("span.comment > span").text().substring(0,80);
