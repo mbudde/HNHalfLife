@@ -165,7 +165,7 @@ if (window.location.pathname === "/item") {
                     .find('a[href^=item]')
                     .css('color', '#FF6C0A')
                     .attr('name', potentialNewComments[tIndex].commentID);
-                $("<tr><td><img border='0' width='10' height='1' src='http://ycombinator.com/images/s.gif'></td><td class='default'><span class='comhead'>" + potentialNewComments[tIndex].commentAuthor + " says: <a style='text-decoration: underline' href='#" + potentialNewComments[tIndex].commentID + "'> " + potentialNewComments[tIndex].commentText + "[...]</a></span></td></tr>").appendTo("#newCommentsBody");
+                $("<tr><td style='width: 10px'></td><td class='default'><span class='comhead'>" + potentialNewComments[tIndex].commentAuthor + " says: <a style='text-decoration: underline' href='#" + potentialNewComments[tIndex].commentID + "'> " + potentialNewComments[tIndex].commentText + "[...]</a></span></td></tr>").appendTo("#newCommentsBody");
             }
 
 
