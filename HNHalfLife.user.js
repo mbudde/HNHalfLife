@@ -85,29 +85,23 @@ if (window.location.pathname === "/item") {
     //$.jStorage.deleteKey(id.toString());
     var story = $.jStorage.get(id.toString());
 
-    if(!story){
+    if (!story) {
         var lastVisited = new Date().getTime();
-        var dataToInsert =
-        {
-            "numComments" : numComments,
-            "timeStamp" : timeStamp,
-            "lastVisited" : lastVisited
+        var dataToInsert = {
+            "numComments": numComments,
+            "timeStamp": timeStamp,
+            "lastVisited": lastVisited
         };
 
-        $.jStorage.set(id.toString(),dataToInsert);
-    }
-    else {
+        $.jStorage.set(id.toString(), dataToInsert);
+    } else {
         var commentDiff = numComments - story.numComments;
 
-        //update the subtext at top of story
-        if (commentDiff > 0) {
+        if (commentDiff >= 1) {
+            // update the subtext at top of story
             $subtext.find('a[href^=item]:last').append(" (" + commentDiff.toString() + " new)");
-        }
 
-        //find all new comments if they exist
-        if (commentDiff >= 1 ){
-
-            //really gross inline HTML here, needs a better solution
+            // really gross inline HTML here, needs a better solution
             $('img[src$="s\.gif"][width="0"]:first')
                 .parents()
                 .eq(7)
@@ -119,6 +113,7 @@ if (window.location.pathname === "/item") {
 
             var potentialNewComments = new Array();
 
+            // find all new comments if they exist
             $("span.comhead:not(:first)").each(function() {
                 var commentDetails = $(this).text().match(/([A-Za-z0-9_]+) ([0-9]{0,3} (?:minutes?|hours?|days?|years?) ago)/);
                 if (!commentDetails) return; // Deleted comment
@@ -127,7 +122,7 @@ if (window.location.pathname === "/item") {
                 var commentText = $(this).parents().eq(1).find("span.comment > span").text().substring(0,80);
 
 
-                if(commentTimeStamp > story.lastVisited){
+                if (commentTimeStamp > story.lastVisited) {
 
                     //because HN uses fuzzy timestamps, we have to create a list of "potential"
                     //new comments.
@@ -136,12 +131,11 @@ if (window.location.pathname === "/item") {
                     //     HN will round this to "1 hour ago", making it look like a new comment
                     //
                     //To account for this, we store comments now and check by ID later
-                    var tmp =
-                    {
-                        "commentDOMObject" : this,
-                        "commentID" : $(this).find("a[href^=item]").attr("href").match(/item\?id=([0-9]+)/)[1],
-                        "commentText" : commentText,
-                        "commentAuthor" : commentAuthor
+                    var tmp = {
+                        "commentDOMObject": this,
+                        "commentID": $(this).find("a[href^=item]").attr("href").match(/item\?id=([0-9]+)/)[1],
+                        "commentText": commentText,
+                        "commentAuthor": commentAuthor
                     };
                     potentialNewComments.push(tmp);
 
@@ -159,8 +153,7 @@ if (window.location.pathname === "/item") {
 
             //finally, add the indicator for new comments.  Also adds to "comment list" at top of page
             //really gross inline HTML here, needs a better solution
-            var tIndex;
-            for (tIndex=0;tIndex<commentDiff;++tIndex) {
+            for (var tIndex = 0; tIndex < commentDiff; ++tIndex) {
                 $(potentialNewComments[tIndex].commentDOMObject)
                     .find('a[href^=item]')
                     .css('color', '#FF6C0A')
@@ -175,18 +168,18 @@ if (window.location.pathname === "/item") {
         //pre-cache the time so we don't miss any comments during the 10s waiting period
         var newLastVisited = new Date().getTime();
 
-        setTimeout(function(){
+        setTimeout(function() {
             story.numComments = numComments;
             story.lastVisited = newLastVisited;
-            $.jStorage.set(id.toString(),story);
-        },5000);
+            $.jStorage.set(id.toString(), story);
+        }, 5000);
 
     }
 
 
 
     //event handler for "comment list"
-    $("#showComments").click(function(e){
+    $("#showComments").click(function(e) {
         if ($("#newCommentsBody").is(":visible"))
             $(this).text("Show New Comments");
         else
@@ -203,7 +196,7 @@ else if (window.location.pathname.match(/\/(?:news|newest|ask|best|active|noobst
 
         //A little kludgy, but this checks for the occasional job posting, which
         // don't have normal subtext lines (no points, comments, etc)
-        if ($(this).text().match("point")){
+        if ($(this).text().match("point")) {
 
             var commentsLink = $(this).find("a[href^=item]:last");
             var id = commentsLink.attr("href").match(/item\?id=([0-9]+)/)[1];
@@ -211,7 +204,7 @@ else if (window.location.pathname.match(/\/(?:news|newest|ask|best|active|noobst
             //check to see if this story is in our storage
             var story = $.jStorage.get(id.toString());
 
-            if(story){
+            if (story) {
                 var numComments = commentsLink.text().match(/([0-9]+) comments?/)[1];
                 //var timeAgo = $(this).text().match(/([0-9]{0,3} (?:minutes?|hours?|days?|years?) ago)/);
                 //var timeStamp = timeAgoToDate(timeAgo[1]);
@@ -226,7 +219,3 @@ else if (window.location.pathname.match(/\/(?:news|newest|ask|best|active|noobst
         }
     });
 }
-
-
-
-
