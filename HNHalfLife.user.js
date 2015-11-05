@@ -100,10 +100,9 @@ if (window.location.pathname === "/item") {
         var commentDiff = numComments - story.numComments;
 
         //update the subtext at top of story
-        if (commentDiff ===1 )
-            $subtext.append(" | " + commentDiff.toString() + " New Comment");
-        else if (commentDiff > 1 )
-            $subtext.append(" | " + commentDiff.toString() + " New Comments");
+        if (commentDiff > 0) {
+            $subtext.find('a[href^=item]:last').append(" (" + commentDiff.toString() + " new)");
+        }
 
         //find all new comments if they exist
         if (commentDiff >= 1 ){
@@ -161,8 +160,10 @@ if (window.location.pathname === "/item") {
             //really gross inline HTML here, needs a better solution
             var tIndex;
             for (tIndex=0;tIndex<commentDiff;++tIndex) {
-                var aNameID = '<a name="' + potentialNewComments[tIndex].commentID + '"></a>';
-                $(" <span>" + aNameID + " *New Comment*</span>").css("color","#FF6C0A").appendTo(potentialNewComments[tIndex].commentDOMObject);
+                $(potentialNewComments[tIndex].commentDOMObject)
+                    .find('a[href^=item]')
+                    .css('color', '#FF6C0A')
+                    .attr('name', potentialNewComments[tIndex].commentID);
                 $("<tr><td><img border='0' width='10' height='1' src='http://ycombinator.com/images/s.gif'></td><td class='default'><span class='comhead'>" + potentialNewComments[tIndex].commentAuthor + " says: <a style='text-decoration: underline' href='#" + potentialNewComments[tIndex].commentID + "'> " + potentialNewComments[tIndex].commentText + "[...]</a></span></td></tr>").appendTo("#newCommentsBody");
             }
 
@@ -203,29 +204,22 @@ else if (window.location.pathname.match(/\/(?:news|newest|ask|best|active|noobst
         // don't have normal subtext lines (no points, comments, etc)
         if ($(this).text().match("point")){
 
-            var id = $(this).find("a[href^=item]").attr("href").match(/item\?id=([0-9]+)/)[1];
+            var commentsLink = $(this).find("a[href^=item]:last");
+            var id = commentsLink.attr("href").match(/item\?id=([0-9]+)/)[1];
             
             //check to see if this story is in our storage
             var story = $.jStorage.get(id.toString());
 
             if(story){
-                var numComments = $(this).find("a[href^=item]").text().match(/([0-9]+) comments?/)[1];
+                var numComments = commentsLink.text().match(/([0-9]+) comments?/)[1];
                 //var timeAgo = $(this).text().match(/([0-9]{0,3} (?:minutes?|hours?|days?|years?) ago)/);
                 //var timeStamp = timeAgoToDate(timeAgo[1]);
 
                 var commentDiff = numComments - story.numComments;
 
-                //update the subtext at top of story
-                //Note: Is there a better way to add a vertical bar without styling, other than performing two appends?
-                if (commentDiff === 1 ){
-                    //$(this).append(" | ");
-                    $("<span> (" + commentDiff.toString() + " New Comment)</span>").css("color","#FF6C0A").appendTo(this);
+                if (commentDiff > 0) {
+                    $("<span> (" + commentDiff.toString() + " new)</span>").css("color","#FF6C0A").appendTo(commentsLink);
                 }
-                else if (commentDiff > 1 ){
-                    //$(this).append(" | ");
-                    $("<span> (" + commentDiff.toString() + " New Comments)</span>").css("color","#FF6C0A").appendTo(this);
-                }
-
 
             }
         }
