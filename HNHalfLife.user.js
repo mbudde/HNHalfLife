@@ -51,17 +51,11 @@ if (window.location.pathname !== "/saved") {
 
 
 if (window.location.pathname === "/item") {
-
-
-    //find the first subtext table row and extract important information
     var $subtext = $("td.subtext:first");
     var storyId = $subtext.find("a[href^=item]").attr("href").substring(8);
     var numComments = $subtext.find("a[href^=item]").text().match(/([0-9]+) comments?/)[1];
 
-
-    //check to see if this story is in our storage
     var story = $.jStorage.get(storyId);
-
     if (!story || !story.maxCommentId) {
         var maxCommentId = 0;
         $('span.comhead a[href^=item]').each(function() {
@@ -80,10 +74,10 @@ if (window.location.pathname === "/item") {
         var commentDiff = numComments - story.numComments;
 
         if (commentDiff >= 1) {
-            // update the subtext at top of story
+            // Update the subtext at top of story
             $subtext.find('a[href^=item]:last').append(" (" + commentDiff.toString() + " new)");
 
-            // really gross inline HTML here, needs a better solution
+            // Really gross inline HTML here, needs a better solution
             $('img[src$="s\.gif"][width="0"]:first')
                 .parents()
                 .eq(7)
@@ -96,48 +90,38 @@ if (window.location.pathname === "/item") {
             var potentialNewComments = new Array();
             var newMaxCommentId = story.maxCommentId;
 
-            // find all new comments if they exist
+            // Find all new comments
             $("span.comhead:not(:first)").each(function() {
                 var commentAuthor = $(this).find("a[href^=user]").text();
                 if (!commentAuthor) return; // Deleted comment
                 var commentId = Number($(this).find("a[href^=item]").attr("href").substring(8));
-                var commentText = $(this).parents().eq(1).find("span.comment > span").text().substring(0,80);
+                var commentText = $(this).parents().eq(1).find("span.comment > span").text().substring(0, 80);
                 if (commentId > newMaxCommentId) {
                     newMaxCommentId = commentId;
                 }
 
-                // if (commentTimeStamp > story.lastVisited) {
                 if (commentId > story.maxCommentId) {
-
-                    //because HN uses fuzzy timestamps, we have to create a list of "potential"
-                    //new comments.
-                    //
-                    //e.g. You read a post 1.2 hours ago.  A comment was made 1.3 hours ago.
-                    //     HN will round this to "1 hour ago", making it look like a new comment
-                    //
-                    //To account for this, we store comments now and check by ID later
-                    var tmp = {
+                    potentialNewComments.push({
                         "commentDOMObject": this,
                         "commentId": commentId,
                         "commentText": commentText,
                         "commentAuthor": commentAuthor
-                    };
-                    potentialNewComments.push(tmp);
-
+                    });
                 }
             });
 
-            //sorts descending, so most recent comments (largest numbers) are the first keys
+            // Sorts descending, so the most recent comments (largest numbers) come first
             potentialNewComments.sort(function(a, b) {
                 return a.commentId < b.commentId;
             });
 
-            //this should never happen, but just in case...
-            if (potentialNewComments.length < commentDiff)
+            // This should never happen, but just in case...
+            if (potentialNewComments.length < commentDiff) {
                 commentDiff = potentialNewComments.length;
+            }
 
-            //finally, add the indicator for new comments.  Also adds to "comment list" at top of page
-            //really gross inline HTML here, needs a better solution
+            // Finally, add the indicator for new comments.  Also adds to "comment list" at top of page
+            // Really gross inline HTML here, needs a better solution
             for (var tIndex = 0; tIndex < commentDiff; ++tIndex) {
                 $(potentialNewComments[tIndex].commentDOMObject)
                     .find('a[href^=item]')
@@ -145,23 +129,19 @@ if (window.location.pathname === "/item") {
                     .attr('name', potentialNewComments[tIndex].commentId);
                 $("<tr><td style='width: 10px'></td><td class='default'><span class='comhead'>" + potentialNewComments[tIndex].commentAuthor + " says: <a style='text-decoration: underline' href='#" + potentialNewComments[tIndex].commentId + "'> " + potentialNewComments[tIndex].commentText + "[...]</a></span></td></tr>").appendTo("#newCommentsBody");
             }
+
+            setTimeout(function() {
+                $.jStorage.set(storyId, {
+                  'numComments': numComments,
+                  'maxCommentId': newMaxCommentId
+                });
+            }, 5000);
+
         }
-
-        //update the datastore after 5s so "new" comments are removed after viewing
-        //pre-cache the time so we don't miss any comments during the 5s waiting period
-        var newLastVisited = new Date().getTime();
-
-        setTimeout(function() {
-            story.numComments = numComments;
-            story.lastVisited = newLastVisited;
-            $.jStorage.set(storyId, story);
-        }, 5000);
 
     }
 
-
-
-    //event handler for "comment list"
+    // Event handler for "comment list"
     $("#showComments").click(function(e) {
         if ($("#newCommentsBody").is(":visible"))
             $(this).text("Show New Comments");
@@ -173,18 +153,19 @@ if (window.location.pathname === "/item") {
     });
 
 }
-//update main index pages with "New Comments" text
+
+// Update main index pages with "New Comments" text
 else if (window.location.pathname.match(/\/(?:news|newest|ask|best|active|noobstories|saved|x)/)) {
     $("td.subtext").each(function() {
 
-        //A little kludgy, but this checks for the occasional job posting, which
+        // A little kludgy, but this checks for the occasional job posting, which
         // don't have normal subtext lines (no points, comments, etc)
         if ($(this).text().match("point")) {
 
             var commentsLink = $(this).find("a[href^=item]:last");
             var id = commentsLink.attr("href").substring(8);
             
-            //check to see if this story is in our storage
+            // Check to see if this story is in our storage
             var story = $.jStorage.get(id);
 
             if (story) {
