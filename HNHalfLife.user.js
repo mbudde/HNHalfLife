@@ -44,26 +44,6 @@
 
 
 
-
-function timeAgoToDate(timeAgo) {
-    var matches = timeAgo.match(/([0-9]{0,3}) (minutes?|hours?|days?|years?) ago/),
-        num = matches[1],
-        type = matches[2],
-        epochTime = new Date().getTime();
-
-    if (type === "minutes" || type === "minute") {
-        epochTime -= num * 60000;
-    } else if (type === "hours" || type === "hour") {
-        epochTime -= num * 3600000;
-    } else if (type === "days" || type === "day") {
-        epochTime -= num * 86400000;
-    } else if (type === "years" || type === "year") {
-        epochTime -= num * 86400000 * 365;
-    }
-
-    return epochTime;
-}
-
 if (window.location.pathname !== "/saved") {
     var user = $("span.pagetop a[href^=user]").attr("href").match(/user\?id=([A-Za-z0-9_]+)/)[1];
     $("span.pagetop:first").append(" | <a href='http://news.ycombinator.com/saved?id=" + user + "'>saved</a>");
@@ -75,25 +55,27 @@ if (window.location.pathname === "/item") {
 
     //find the first subtext table row and extract important information
     var $subtext = $("td.subtext:first");
-    var id = $subtext.find("a[href^=item]").attr("href").match(/item\?id=([0-9]+)/)[1];
+    var storyId = $subtext.find("a[href^=item]").attr("href").substring(8);
     var numComments = $subtext.find("a[href^=item]").text().match(/([0-9]+) comments?/)[1];
-    var timeAgo = $subtext.text().match(/([0-9]{0,3} (?:minutes?|hours?|days?|years?) ago)/);
-    var timeStamp = timeAgoToDate(timeAgo[1]);
 
 
     //check to see if this story is in our storage
-    //$.jStorage.deleteKey(id.toString());
-    var story = $.jStorage.get(id.toString());
+    var story = $.jStorage.get(storyId);
 
-    if (!story) {
-        var lastVisited = new Date().getTime();
+    if (!story || !story.maxCommentId) {
+        var maxCommentId = 0;
+        $('span.comhead a[href^=item]').each(function() {
+            var id = Number($(this).attr('href').substring(8));
+            if (id > maxCommentId) {
+              maxCommentId = id;
+            }
+        });
         var dataToInsert = {
             "numComments": numComments,
-            "timeStamp": timeStamp,
-            "lastVisited": lastVisited
+            "maxCommentId": maxCommentId
         };
 
-        $.jStorage.set(id.toString(), dataToInsert);
+        $.jStorage.set(storyId, dataToInsert);
     } else {
         var commentDiff = numComments - story.numComments;
 
@@ -112,17 +94,20 @@ if (window.location.pathname === "/item") {
 
 
             var potentialNewComments = new Array();
+            var newMaxCommentId = story.maxCommentId;
 
             // find all new comments if they exist
             $("span.comhead:not(:first)").each(function() {
-                var commentDetails = $(this).text().match(/([A-Za-z0-9_]+) ([0-9]{0,3} (?:minutes?|hours?|days?|years?) ago)/);
-                if (!commentDetails) return; // Deleted comment
-                var commentAuthor = commentDetails[1];
-                var commentTimeStamp = timeAgoToDate(commentDetails[2]);
+                var commentAuthor = $(this).find("a[href^=user]").text();
+                if (!commentAuthor) return; // Deleted comment
+                var commentId = Number($(this).find("a[href^=item]").attr("href").substring(8));
                 var commentText = $(this).parents().eq(1).find("span.comment > span").text().substring(0,80);
+                if (commentId > newMaxCommentId) {
+                    newMaxCommentId = commentId;
+                }
 
-
-                if (commentTimeStamp > story.lastVisited) {
+                // if (commentTimeStamp > story.lastVisited) {
+                if (commentId > story.maxCommentId) {
 
                     //because HN uses fuzzy timestamps, we have to create a list of "potential"
                     //new comments.
@@ -133,7 +118,7 @@ if (window.location.pathname === "/item") {
                     //To account for this, we store comments now and check by ID later
                     var tmp = {
                         "commentDOMObject": this,
-                        "commentID": $(this).find("a[href^=item]").attr("href").match(/item\?id=([0-9]+)/)[1],
+                        "commentId": commentId,
                         "commentText": commentText,
                         "commentAuthor": commentAuthor
                     };
@@ -144,7 +129,7 @@ if (window.location.pathname === "/item") {
 
             //sorts descending, so most recent comments (largest numbers) are the first keys
             potentialNewComments.sort(function(a, b) {
-                return a.commentID < b.commentID;
+                return a.commentId < b.commentId;
             });
 
             //this should never happen, but just in case...
@@ -157,21 +142,19 @@ if (window.location.pathname === "/item") {
                 $(potentialNewComments[tIndex].commentDOMObject)
                     .find('a[href^=item]')
                     .css('color', '#FF6C0A')
-                    .attr('name', potentialNewComments[tIndex].commentID);
-                $("<tr><td style='width: 10px'></td><td class='default'><span class='comhead'>" + potentialNewComments[tIndex].commentAuthor + " says: <a style='text-decoration: underline' href='#" + potentialNewComments[tIndex].commentID + "'> " + potentialNewComments[tIndex].commentText + "[...]</a></span></td></tr>").appendTo("#newCommentsBody");
+                    .attr('name', potentialNewComments[tIndex].commentId);
+                $("<tr><td style='width: 10px'></td><td class='default'><span class='comhead'>" + potentialNewComments[tIndex].commentAuthor + " says: <a style='text-decoration: underline' href='#" + potentialNewComments[tIndex].commentId + "'> " + potentialNewComments[tIndex].commentText + "[...]</a></span></td></tr>").appendTo("#newCommentsBody");
             }
-
-
-
         }
+
         //update the datastore after 5s so "new" comments are removed after viewing
-        //pre-cache the time so we don't miss any comments during the 10s waiting period
+        //pre-cache the time so we don't miss any comments during the 5s waiting period
         var newLastVisited = new Date().getTime();
 
         setTimeout(function() {
             story.numComments = numComments;
             story.lastVisited = newLastVisited;
-            $.jStorage.set(id.toString(), story);
+            $.jStorage.set(storyId, story);
         }, 5000);
 
     }
@@ -199,16 +182,13 @@ else if (window.location.pathname.match(/\/(?:news|newest|ask|best|active|noobst
         if ($(this).text().match("point")) {
 
             var commentsLink = $(this).find("a[href^=item]:last");
-            var id = commentsLink.attr("href").match(/item\?id=([0-9]+)/)[1];
+            var id = commentsLink.attr("href").substring(8);
             
             //check to see if this story is in our storage
-            var story = $.jStorage.get(id.toString());
+            var story = $.jStorage.get(id);
 
             if (story) {
                 var numComments = commentsLink.text().match(/([0-9]+) comments?/)[1];
-                //var timeAgo = $(this).text().match(/([0-9]{0,3} (?:minutes?|hours?|days?|years?) ago)/);
-                //var timeStamp = timeAgoToDate(timeAgo[1]);
-
                 var commentDiff = numComments - story.numComments;
 
                 if (commentDiff > 0) {
